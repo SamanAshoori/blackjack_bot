@@ -40,7 +40,7 @@ class BlackjackAgent:
     def decay_epsilon(self):
         self.epsilon = max(0.01,self.epsilon * 0.9995)
 
-def train(episodes=50000): # Needed ~50k episodes to see good convergence
+def train(episodes=100_000): # Needed 100k episodes to see good convergence
     agent = BlackjackAgent()
     
     # Just for tracking our progress
