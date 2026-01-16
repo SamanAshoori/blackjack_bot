@@ -1,11 +1,13 @@
 import gymnasium as gym
 import numpy as np
 from collections import defaultdict
+from one_shoe_blackjack import BlackjackEnv
 import random
 
 # Phase 1: We use the standard env to test our Agent structure
 # Later, we will replace this with 'CustomOneShoeBlackjackEnv'
-env = gym.make('Blackjack-v1', natural=False, sab=False)
+#env = gym.make('Blackjack-v1', natural=False, sab=False)
+env = BlackjackEnv(natural=False, sab=False)
 
 class BlackjackAgent:
     def __init__(self, learning_rate=0.01, gamma=0.95, epsilon=1.0):
