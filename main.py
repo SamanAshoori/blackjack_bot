@@ -21,7 +21,6 @@ class BlackjackAgent:
         Logic: Epsilon-Greedy. Random chance to explore, otherwise pick best Q-value.
 
         """
-        random.uniform(0,1)
         if random.uniform(0,1) < self.epsilon:
             return env.action_space.sample()
         else:
