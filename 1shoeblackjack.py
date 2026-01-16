@@ -13,14 +13,6 @@ def cmp(a, b):
 
 
 
-def draw_card(self):
-    return int(np_random.choice(deck))
-
-
-def draw_hand(np_random):
-    return [draw_card(np_random), draw_card(np_random)]
-
-
 def usable_ace(hand):  # Does this hand have a usable ace?
     return int(1 in hand and sum(hand) + 10 <= 21)
 
@@ -173,10 +165,17 @@ class BlackjackEnv(gym.Env):
 
         self.render_mode = render_mode
 
+    def draw_card(self):
+        #Pops a card so it gets removed from overall list
+        return self.deck.pop()
+    
+    def draw_hand(self):
+        return [self.draw_card(), self.draw_card()]
+
     def step(self, action):
         assert self.action_space.contains(action)
         if action:  # hit: add a card to players hand and return
-            self.player.append(draw_card(self.np_random))
+            self.player.append(self.draw_card())
             if is_bust(self.player):
                 terminated = True
                 reward = -1.0
@@ -186,7 +185,7 @@ class BlackjackEnv(gym.Env):
         else:  # stick: play out the dealers hand, and score
             terminated = True
             while sum_hand(self.dealer) < 17:
-                self.dealer.append(draw_card(self.np_random))
+                self.dealer.append(self.draw_card())
             reward = cmp(score(self.player), score(self.dealer))
             if self.sab and is_natural(self.player) and not is_natural(self.dealer):
                 # Player automatically wins. Rules consistent with S&B
@@ -220,8 +219,10 @@ class BlackjackEnv(gym.Env):
         self.deck = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,10,10,10] * 4
         #shuffle said deck of cards
         self.np_random.shuffle(self.deck)
-        self.dealer = draw_hand(self.np_random)
-        self.player = draw_hand(self.np_random)
+
+        #dealer - then player draws a card
+        self.dealer = self.draw_hand()
+        self.player = self.draw_hand()
 
         _, dealer_card_value, _ = self._get_obs()
 
