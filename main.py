@@ -12,25 +12,42 @@ class BlackjackAgent:
         self.q_table = defaultdict(float)
         self.lr = learning_rate
         self.gamma = gamma
-        self.epsilon = epsilon # Exploration rate
+        self.epsilon = epsilon 
+        self.epsilon_decay = 0.99995 # Decay factor
+        self.min_epsilon = 0.01 # Minimum epsilon value
+
 
     def get_action(self, state):
         if random.uniform(0,1) < self.epsilon:
             return env.action_space.sample()
         else:
-            return np.argmax([self.q_table[(state, a)] for a in range(env.action_space.n)])
+            qs = [self.q_table[(state, a)] for a in range(env.action_space.n)]
+            return np.argmax(qs)
 
 
     def update(self, episode_memory):
+        G = 0
         for state, action, reward in reversed(episode_memory):
             G = reward + self.gamma * G
-            self.q_table[(state, action)] += self.lr * (G - self.q_table[(state, action)])  
+            
+            # Standard MC Update formula
+            old_value = self.q_table[(state, action)]
+            self.q_table[(state, action)] = old_value + self.lr * (G - old_value)
+            
+        # Decay epsilon after learning from the episode
+        self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)  
     
     def decay_epsilon(self):
         self.epsilon = max(0.01,self.epsilon * 0.9995)
 
-def train(episodes=1000):
+def train(episodes=50000): # Needed ~50k episodes to see good convergence
     agent = BlackjackAgent()
+    
+    # Just for tracking our progress
+    wins = 0
+    losses = 0
+    draws = 0
+    
     
     for i in range(episodes):
         episode_memory = []
@@ -43,10 +60,21 @@ def train(episodes=1000):
             done = terminated or truncated
             
             episode_memory.append((state, action, reward))
-            
             state = next_state
+            
+            if done and reward > 0:
+                wins += 1
+            elif done and reward < 0:
+                losses += 1
+            elif done and reward == 0:
+                draws += 1
+                
+
         agent.update(episode_memory)
-        agent.decay_epsilon()
+        
+        if (i+1) % 5000 == 0:
+            print(f"Episode {i+1}: Epsilon {agent.epsilon:.4f} | Win rate (last 5k): {wins/5000:.2%}")
+            wins = 0
 
 
 
