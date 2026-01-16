@@ -15,12 +15,6 @@ class BlackjackAgent:
         self.epsilon = epsilon # Exploration rate
 
     def get_action(self, state):
-        """
-        Input: state (tuple)
-        Output: action (0 for Stick, 1 for Hit)
-        Logic: Epsilon-Greedy. Random chance to explore, otherwise pick best Q-value.
-
-        """
         if random.uniform(0,1) < self.epsilon:
             return env.action_space.sample()
         else:
@@ -28,11 +22,6 @@ class BlackjackAgent:
 
 
     def update(self, episode_memory):
-        """
-        Input: A list of (state, action, reward) tuples from the WHOLE game.
-        Logic: Calculate Return (G) backwards, then update Q-table.
-        """
-        G = 0
         for state, action, reward in reversed(episode_memory):
             G = reward + self.gamma * G
             self.q_table[(state, action)] += self.lr * (G - self.q_table[(state, action)])  
