@@ -15,3 +15,5 @@ Actions (simplified):
 At the end of both turns - the player with highest total (below or equal to 21 wins) if either player is above 21 then you lose (go bust)
 
 following this video = https://youtu.be/9orWCaDoo3c?si=SZjxp5pH1nH_osCO&t=1743
+
+then need to find a way to add card counting to this game for player advantages
