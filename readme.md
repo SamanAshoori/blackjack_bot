@@ -25,6 +25,8 @@ Where:
 In a finite deck scenario, the probability $P(s' | s, a)$ changes as cards are removed from the shoe. To solve this without exploring the entire history space (which would be computationally intractable), the state space is augmented to include a "Running Count" or "True Count" heuristic, allowing the agent to adjust its betting and playing strategy based on the richness of the remaining deck.
 
 ## Implementation Details
+My first run at a card counting one Shoe bot came up massively in debt
+
 
 ### Tech Stack
 * **Language:** Python 3.10+
