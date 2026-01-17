@@ -176,10 +176,11 @@ class BlackjackEnv(gym.Env):
         self.count = 0
 
     def get_true_count(self):
-        # Calculate true count: running count / decks remaining
-        # We use max(..., 0.5) to avoid division by zero or extreme values near end of deck
-        decks_remaining = len(self.deck) / 52.0
-        return self.count / max(decks_remaining, 0.5)
+        cards_remaining = len(self.deck)
+        # Fix: Floor decks_remaining at 0.5 to prevent massive TC spikes
+        # when deck is low. Matches the new cut card logic (26 cards).
+        decks_remaining = max(cards_remaining / 52.0, 0.5)
+        return self.count / decks_remaining
 
     def draw_card(self):
         # Safety check: Reshuffle if deck is empty (should be rare with cut card logic)
@@ -223,18 +224,15 @@ class BlackjackEnv(gym.Env):
             self._reveal_hole_card()
             while sum_hand(self.dealer) < 17:
                 self.dealer.append(self.draw_card())
-            reward = cmp(score(self.player), score(self.dealer))
+            
+            # Fix: Check for Natural Blackjack explicitly before comparing scores
+            # This ensures Player BJ (21) beats Dealer 21 (3 cards)
             if self.sab and is_natural(self.player) and not is_natural(self.dealer):
-                # Player automatically wins. Rules consistent with S&B
                 reward = 1.0
-            elif (
-                not self.sab
-                and self.natural
-                and is_natural(self.player)
-                and reward == 1.0
-            ):
-                # Natural gives extra points, but doesn't autowin. Legacy implementation
+            elif not self.sab and self.natural and is_natural(self.player) and not is_natural(self.dealer):
                 reward = 1.5
+            else:
+                reward = cmp(score(self.player), score(self.dealer))
 
         if self.render_mode == "human":
             self.render()
@@ -256,28 +254,23 @@ class BlackjackEnv(gym.Env):
 
         return (player_sum, self.dealer[0], player_usable_ace, encoded_count)
 
-    def reset(
-        self,
-        seed: int | None = None,
-        options: dict | None = None,
-    ):
+    def reset(self,seed: int | None = None,options: dict | None = None,):
         super().reset(seed=seed)
 
-        if len(self.deck) < 15:
+        # Fix: Move cut card to 26 (50% penetration) to stabilize True Count
+        if len(self.deck) < 26:
             self.reshuffle_deck()
 
-        #dealer - then player draws a card
-        # Draw dealer hand manually to hide the hole card count
+        # Draw dealer hand
         self.dealer = []
-        self.dealer.append(self.draw_card()) # Upcard (count visible)
-        
-        hole_card = self.draw_card() # Hole card (count hidden)
+        self.dealer.append(self.draw_card())  # Upcard - count visible
+    
+        # Draw hole card WITHOUT counting it
+        if not self.deck:
+            self.reshuffle_deck()
+        hole_card = self.deck.pop()
         self.dealer.append(hole_card)
-        # Reverse the count update for the hole card until it's revealed
-        if hole_card in [2, 3, 4, 5, 6]:
-            self.count -= 1
-        elif hole_card in [10, 1]:
-            self.count += 1
+        # Note: hole card is NOT counted yet - will be counted when revealed
 
         self.player = self.draw_hand()
 
@@ -296,6 +289,7 @@ class BlackjackEnv(gym.Env):
 
         if self.render_mode == "human":
             self.render()
+    
         return self._get_obs(), {
             "count": self.count,
             "true_count": self.get_true_count(),
