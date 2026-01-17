@@ -1,7 +1,7 @@
-import gymnasium as gym
 import numpy as np
 from collections import defaultdict
 import random
+import pickle
 from one_shoe_blackjack import BlackjackEnv
 
 class CardCountingAgent:
@@ -83,7 +83,15 @@ class CardCountingAgent:
         else:
             return 1  # Min bet
 
-def train(episodes=500_000):
+    def save(self, filename):
+        with open(filename, 'wb') as f:
+            pickle.dump(dict(self.q_table), f)
+
+    def load(self, filename):
+        with open(filename, 'rb') as f:
+            self.q_table = defaultdict(float, pickle.load(f))
+
+def train(episodes=5_000_000):
     env = BlackjackEnv(natural=False, sab=False)
     agent = CardCountingAgent()
     
@@ -91,6 +99,9 @@ def train(episodes=500_000):
     losses = 0
     draws = 0
     bankroll = 0.0
+    
+    # Track performance by count bucket
+    performance_by_count = defaultdict(lambda: {'wins': 0, 'total': 0, 'profit': 0})
     
     # Track the true count from the previous episode to decide the bet
     # for the upcoming episode (before cards are dealt).
@@ -107,8 +118,14 @@ def train(episodes=500_000):
         # If the deck has > 45 cards, a shuffle likely happened in reset().
         # If so, our high bet was based on a stale count. In a real casino,
         # we would see the shuffle and lower our bet.
+        start_of_hand_tc = last_true_count
+        bet = agent.get_bet_size(info['true_count'])
+
         if info['cards_remaining'] > 45:
             bet = 1
+            start_of_hand_tc = 0.0
+        else:
+            start_of_hand_tc = info['true_count']
         
         state = agent.get_state(obs, info)
         done = False
@@ -140,6 +157,13 @@ def train(episodes=500_000):
         else:
             draws += 1
             
+        # Update performance stats by bucket
+        tc_bucket = agent.get_true_count_bucket(start_of_hand_tc)
+        performance_by_count[tc_bucket]['total'] += 1
+        performance_by_count[tc_bucket]['profit'] += bet * reward
+        if reward > 0:
+            performance_by_count[tc_bucket]['wins'] += 1
+            
         # Update true count for next hand's betting decision
         last_true_count = info['true_count']
 
@@ -149,6 +173,15 @@ def train(episodes=500_000):
                   f"Bankroll: {bankroll:.1f}")
             wins = losses = draws = 0
 
+    print("\nPerformance by True Count Bucket:")
+    for bucket in sorted(performance_by_count.keys()):
+        stats = performance_by_count[bucket]
+        win_rate = stats['wins'] / stats['total'] if stats['total'] > 0 else 0
+        avg_profit = stats['profit'] / stats['total'] if stats['total'] > 0 else 0
+        print(f"Bucket {bucket}: WR={win_rate:.2%} | Avg Profit={avg_profit:.3f} | Hands={stats['total']}")
+
+    agent.save("card_counting_model.pkl")
+    print("Model saved to card_counting_model.pkl")
     print("Training completed.")
 
 if __name__ == "__main__":
