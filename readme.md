@@ -26,6 +26,7 @@ In a finite deck scenario, the probability $P(s' | s, a)$ changes as cards are r
 
 ## Implementation Details
 My first run at a card counting one Shoe bot came up massively in debt
+<img width="655" height="377" alt="image" src="https://github.com/user-attachments/assets/b79e2000-8854-48a5-b0bc-57f818992d0e" />
 
 
 ### Tech Stack
