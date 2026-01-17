@@ -11,12 +11,18 @@ class Blackjack:
         self.dealer = []
         self.player = []
     
-    def set_state(self, dealer, player,deck, seed = 25):
+    def set_state(self, state):
+        (dealer , player , deck , seed) = state
+        self.seed = seed
         self.dealer = dealer
         self.player = player
         self.deck = deck
         random.seed(seed)
         random.shuffle(self.deck)
+    
+    def get_state(self):
+        return self.dealer, self.player, self.deck, self.seed
+    
 
     def draw_player(self):
         #Draw a card for the player
@@ -26,9 +32,12 @@ class Blackjack:
         #Draw a card for the dealer
         self.dealer.append(self.deck.pop(0))
 
-bj = Blackjack()
-print(bj.deck)
-bj.draw_player()
-print(bj.player)
-bj.draw_dealer()
-print(bj.dealer)
+    def display_game(self):
+        print(f"Remaining cards: {len(self.deck)}")
+        print(f"Dealer: {self.dealer}")
+        print(f"Player: {self.player}")
+
+
+
+bj = Blackjack(seed = 20)
+print(bj.display_game())
