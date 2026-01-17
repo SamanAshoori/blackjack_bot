@@ -165,6 +165,14 @@ class BlackjackEnv(gym.Env):
 
         self.render_mode = render_mode
 
+        self.full_deck = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,10,10,10] * 4
+        self.deck = []
+        self.reshuffle_deck()
+
+    def reshuffle_deck(self):
+        self.deck = self.full_deck.copy()
+        np.random.shuffle(self.deck)
+
     def draw_card(self):
         #Pops a card so it gets removed from overall list
         return self.deck.pop()
@@ -215,10 +223,9 @@ class BlackjackEnv(gym.Env):
         options: dict | None = None,
     ):
         super().reset(seed=seed)
-        #create 4 lists (decks of cards)
-        self.deck = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,10,10,10] * 4
-        #shuffle said deck of cards
-        self.np_random.shuffle(self.deck)
+
+        if len(self.deck) < 15:
+            self.reshuffle_deck()
 
         #dealer - then player draws a card
         self.dealer = self.draw_hand()
