@@ -200,6 +200,13 @@ class BlackjackEnv(gym.Env):
     def draw_hand(self):
         return [self.draw_card(), self.draw_card()]
 
+    def _reveal_hole_card(self):
+        hole_card = self.dealer[1]
+        if hole_card in [2, 3, 4, 5, 6]:
+            self.count += 1
+        elif hole_card in [10, 1]:
+            self.count -= 1
+
     def step(self, action):
         assert self.action_space.contains(action)
         if action:  # hit: add a card to players hand and return
@@ -207,11 +214,13 @@ class BlackjackEnv(gym.Env):
             if is_bust(self.player):
                 terminated = True
                 reward = -1.0
+                self._reveal_hole_card()
             else:
                 terminated = False
                 reward = 0.0
         else:  # stick: play out the dealers hand, and score
             terminated = True
+            self._reveal_hole_card()
             while sum_hand(self.dealer) < 17:
                 self.dealer.append(self.draw_card())
             reward = cmp(score(self.player), score(self.dealer))
@@ -258,7 +267,18 @@ class BlackjackEnv(gym.Env):
             self.reshuffle_deck()
 
         #dealer - then player draws a card
-        self.dealer = self.draw_hand()
+        # Draw dealer hand manually to hide the hole card count
+        self.dealer = []
+        self.dealer.append(self.draw_card()) # Upcard (count visible)
+        
+        hole_card = self.draw_card() # Hole card (count hidden)
+        self.dealer.append(hole_card)
+        # Reverse the count update for the hole card until it's revealed
+        if hole_card in [2, 3, 4, 5, 6]:
+            self.count -= 1
+        elif hole_card in [10, 1]:
+            self.count += 1
+
         self.player = self.draw_hand()
 
         obs = self._get_obs()

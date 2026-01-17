@@ -96,7 +96,7 @@ class CardCountingAgent:
             self.q_table = defaultdict(float, pickle.load(f))
 
 def train(episodes=5_000_000):
-    env = BlackjackEnv(natural=False, sab=False)
+    env = BlackjackEnv(natural=True, sab=False)
     agent = CardCountingAgent()
     
     wins = 0
