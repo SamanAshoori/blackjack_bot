@@ -5,7 +5,8 @@ import pickle
 from one_shoe_blackjack import BlackjackEnv
 
 class CardCountingAgent:
-    def __init__(self, learning_rate=0.01, gamma=0.95, epsilon=1.0):
+    #changed learning rate to be more aggresive
+    def __init__(self, learning_rate=0.1, gamma=0.95, epsilon=1.0):
         self.q_table = defaultdict(float)
         self.lr = learning_rate
         self.gamma = gamma
@@ -68,20 +69,23 @@ class CardCountingAgent:
         self.epsilon = max(self.min_epsilon, self.epsilon * self.epsilon_decay)
 
     def get_bet_size(self, true_count):
+        confidence = 1.0 - (self.epsilon - self.min_epsilon) / (1.0 - self.min_epsilon)
         """
         Determine bet size based on the True Count.
         Standard Hi-Lo betting spread (1-10 units).
         """
         if true_count >= 4:
-            return 10  # Max bet
+            base_bet = 10 # Max bet
         elif true_count >= 3:
-            return 8
+            base_bet = 8
         elif true_count >= 2:
-            return 4
+            base_bet = 4
         elif true_count >= 1:
-            return 2
+            base_bet = 2
         else:
-            return 1  # Min bet
+            base_bet = 1
+
+        return max(1, int(base_bet * (0.2 + 0.8 * confidence)))
 
     def save(self, filename):
         with open(filename, 'wb') as f:
