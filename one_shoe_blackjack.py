@@ -151,9 +151,10 @@ class BlackjackEnv(gym.Env):
     }
 
     def __init__(self, render_mode: str | None = None, natural=False, sab=False):
+        super().__init__()
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Tuple(
-            (spaces.Discrete(32), spaces.Discrete(11), spaces.Discrete(2))
+            (spaces.Discrete(32), spaces.Discrete(11), spaces.Discrete(2), spaces.Discrete(41))
         )
 
         # Flag to payout 1.5 on a "natural" blackjack win, like casino rules
@@ -167,15 +168,34 @@ class BlackjackEnv(gym.Env):
 
         self.full_deck = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,10,10,10] * 4
         self.deck = []
-        self.reshuffle_deck()
+        self.count = 0
 
     def reshuffle_deck(self):
         self.deck = self.full_deck.copy()
-        np.random.shuffle(self.deck)
+        self.np_random.shuffle(self.deck)
+        self.count = 0
+
+    def get_true_count(self):
+        # Calculate true count: running count / decks remaining
+        # We use max(..., 0.5) to avoid division by zero or extreme values near end of deck
+        decks_remaining = len(self.deck) / 52.0
+        return self.count / max(decks_remaining, 0.5)
 
     def draw_card(self):
+        # Safety check: Reshuffle if deck is empty (should be rare with cut card logic)
+        if not self.deck:
+            self.reshuffle_deck()
+            
         #Pops a card so it gets removed from overall list
-        return self.deck.pop()
+        card = self.deck.pop()
+        
+        # Update Hi-Lo count (2-6: +1, 7-9: 0, 10-A: -1)
+        if card in [2, 3, 4, 5, 6]:
+            self.count += 1
+        elif card in [10, 1]:
+            self.count -= 1
+            
+        return card
     
     def draw_hand(self):
         return [self.draw_card(), self.draw_card()]
@@ -210,12 +230,22 @@ class BlackjackEnv(gym.Env):
         if self.render_mode == "human":
             self.render()
         # truncation=False as the time limit is handled by the `TimeLimit` wrapper added during `make`
-        return self._get_obs(), reward, terminated, False, {}
+        return self._get_obs(), reward, terminated, False, {
+            "count": self.count,
+            "true_count": self.get_true_count(),
+            "cards_remaining": len(self.deck)
+        }
 
     def _get_obs(self):
         # Optimization: Compute sum and usable ace in one pass per step, not two.
         player_sum, player_usable_ace = _hand_sum_and_usable_ace(self.player)
-        return (player_sum, self.dealer[0], player_usable_ace)
+
+        # Clamp count to range [-20, 20] to prevent out-of-bounds errors
+        clamped_count = max(-20, min(20, self.count))
+        # Shift by +20 so it fits in the Discrete(41) space (0 to 40)
+        encoded_count = clamped_count + 20
+
+        return (player_sum, self.dealer[0], player_usable_ace, encoded_count)
 
     def reset(
         self,
@@ -231,7 +261,8 @@ class BlackjackEnv(gym.Env):
         self.dealer = self.draw_hand()
         self.player = self.draw_hand()
 
-        _, dealer_card_value, _ = self._get_obs()
+        obs = self._get_obs()
+        dealer_card_value = obs[1]
 
         suits = ["C", "D", "H", "S"]
         self.dealer_top_card_suit = self.np_random.choice(suits)
@@ -245,7 +276,11 @@ class BlackjackEnv(gym.Env):
 
         if self.render_mode == "human":
             self.render()
-        return self._get_obs(), {}
+        return self._get_obs(), {
+            "count": self.count,
+            "true_count": self.get_true_count(),
+            "cards_remaining": len(self.deck)
+        }
 
     def render(self):
         if self.render_mode is None:
@@ -264,7 +299,7 @@ class BlackjackEnv(gym.Env):
                 'pygame is not installed, run `pip install "gymnasium[toy-text]"`'
             ) from e
 
-        player_sum, dealer_card_value, usable_ace = self._get_obs()
+        player_sum, dealer_card_value, usable_ace, _ = self._get_obs()
         screen_width, screen_height = 600, 500
         card_img_height = screen_height // 3
         card_img_width = int(card_img_height * 142 / 197)
