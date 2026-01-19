@@ -3,10 +3,11 @@
 import random
 import time
 import numpy as np
+from datetime import datetime
 
 
 class Blackjack:
-    def __init__(self, state = None, seed = 25):
+    def __init__(self, state = None, seed = datetime.now().microsecond):
         if state is None:
             self.deck = [i for i in range(52)]
             random.seed(seed)
@@ -15,11 +16,11 @@ class Blackjack:
             self.dealer = []
             self.player = []
         else:
-            self.set_state(state)
+            self.set_state(state, seed = seed)
     
-    def set_state(self, state):
-        (dealer , player , deck , seed) = state
-        self.seed = seed
+    def set_state(self, state, seed = datetime.now().microsecond):
+        (dealer , player , deck) = state
+
         self.dealer = dealer
         self.player = player
         self.deck = deck
@@ -27,7 +28,7 @@ class Blackjack:
         random.shuffle(self.deck)
     
     def get_state(self):
-        return self.dealer, self.player, self.deck, self.seed
+        return (self.dealer, self.player, self.deck)
     
     def convert_cards(self,card):
         #Convert a card
@@ -82,6 +83,7 @@ class Blackjack:
         print(f"Player: {list(map(self.convert_cards,self.player))}, Value: {self.calc()}")
 
 
+
 def Player(env):
     #In MC - player does random action
     if env.calc() == 21:
@@ -97,13 +99,9 @@ def Dealer(env):
 
 
 def SingleGameLoop(verbose = True, state = None):
-
     #Play a single game
     bj = Blackjack(state)
-    #Deal both players cards
-    bj.draw_player()
-    bj.draw_dealer()
-    bj.draw_player()
+
     bj.display_game()
 
 
@@ -137,6 +135,7 @@ def SingleGameLoop(verbose = True, state = None):
 
 
     result = bj.get_result()
+    bj.display_game()
     if result == 0:
         print("Draw")
     elif result == 1:
@@ -144,5 +143,12 @@ def SingleGameLoop(verbose = True, state = None):
     else:
         print("Dealer Wins")
 
-        
-SingleGameLoop()
+
+env = Blackjack()
+#Deal both players cards
+env.draw_player()
+env.draw_dealer()
+env.draw_player()
+
+
+SingleGameLoop(state = env.get_state(), verbose= False)
