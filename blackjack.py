@@ -100,7 +100,11 @@ def Dealer(env):
 
 def SingleGameLoop(verbose = True, state = None):
     #Play a single game
+    
     bj = Blackjack(state)
+    bj.draw_player()
+    bj.draw_dealer()
+    bj.draw_dealer()
 
     bj.display_game()
 
@@ -145,10 +149,7 @@ def SingleGameLoop(verbose = True, state = None):
 
 
 env = Blackjack()
-#Deal both players cards
-env.draw_player()
-env.draw_dealer()
-env.draw_player()
+
 
 
 SingleGameLoop(state = env.get_state(), verbose= False)
